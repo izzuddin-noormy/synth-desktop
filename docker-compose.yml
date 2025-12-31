@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  synth-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: synth-desktop:latest
+    container_name: synth-desktop
+    
+    # X11 forwarding for GUI
+    environment:
+      - DISPLAY=${DISPLAY:-:99}
+      - ELECTRON_DISABLE_SANDBOX=1
+      - NODE_ENV=${NODE_ENV:-development}
+    
+    # Volume mounts for development hot reload
+    volumes:
+      # Source code
+      - ./src:/app/src:ro
+      - ./electron:/app/electron:ro
+      - ./public:/app/public:ro
+      - ./synth-engine:/app/synth-engine:ro
+      
+      # X11 socket for GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITRº-$HOME/.Xauthority}:/root/.Xauthority:ro
+      
+      # Node modules (use container's version)
+      - node_modules:/app/node_modules
+    
+    # Network
+    ports:
+      - "3000:3000"  # Dev server
+    
+    # For GUI display
+    network_mode: host
+    
+    # Privileges for X11
+    ipc: host
+    security_opt:
+      - seccomp:unconfined
+    
+    # Keep container running in dev mode
+    stdin_open: true
+    tty: true
+    
+    # Override command for dev mode
+    command: npm run dev
+
+  # Optional: Development with auto-rebuild
+  synth-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: synth-dev
+    environment:
+      - DISPLAY=${DISPLAY:-:99}
+      - ELECTRON_DISABLE_SANDBOX=1
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/synth-engine/target
+      - /app/dist
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITRº-$HOME/.XAuthority}:/root/.Xauthority:ro
+    ports:
+      - "3000:3000"
+    network_mode: host
+    ipc: host
+    command: npm run dev
+    profiles:
+      - dev
+
+volumes:
+  node_modules:
